@@ -1,0 +1,48 @@
+import hashlib
+
+def sha256(data):
+    return hashlib.sha256(data.encode('utf-8')).hexdigest()
+
+def merkle_proof_verify(D1, H2, H34, root):
+    # Bước 1: Hash D1
+    H1 = sha256(D1)
+    print(f"H1 (hash của D1): {H1}")
+
+    # Bước 2: Tính H12 = hash(H1 + H2)
+    H12 = sha256(H1 + H2)
+    print(f"H12 (cha của H1 và H2): {H12}")
+
+    # Bước 3: Tính root tạm tính = hash(H12 + H34)
+    calculated_root = sha256(H12 + H34)
+    print(f"Tính lại root từ proof: {calculated_root}")
+
+    # Bước 4: So sánh với root public
+    if calculated_root == root:
+        print("✅ Chứng minh thành công: D1 thuộc Merkle Tree này.")
+        return True
+    else:
+        print("❌ Chứng minh thất bại: D1 không khớp.")
+        return False
+
+# Ví dụ tạo cây Merkle để test
+D1 = "data1"
+D5 = "data5"
+D2 = "data2"
+D3 = "data3"
+D4 = "data4"
+
+H1 = sha256(D1)
+H2 = sha256(D2)
+H3 = sha256(D3)
+H4 = sha256(D4)
+
+H12 = sha256(H1 + H2)
+H34 = sha256(H3 + H4)
+
+Root = sha256(H12 + H34)
+
+# Giả sử public chỉ biết Root, H2, H34
+# Người chứng minh chỉ cần biết D1 và cung cấp H2, H34 và Root
+
+print("\n--- Chạy proof ---\n")
+merkle_proof_verify(D5, H2, H34, Root)

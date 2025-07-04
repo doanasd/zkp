@@ -1,0 +1,72 @@
+import hashlib
+import math
+
+def sha256(data):
+    return hashlib.sha256(data.encode('utf-8')).hexdigest()
+
+def commit(m, r):
+    return sha256(m + r)
+
+def build_commitment_merkle_tree(messages, randomness_list):
+    # Tạo leaf: Commit(m, r)
+    leaves = [commit(m, r) for m, r in zip(messages, randomness_list)]
+    tree_levels = [leaves]
+    current_level = leaves
+
+    while len(current_level) > 1:
+        next_level = []
+        for i in range(0, len(current_level), 2):
+            left = current_level[i]
+            right = current_level[i + 1] if i + 1 < len(current_level) else left  # Duplicate nếu lẻ
+            combined = sha256(left + right)
+            next_level.append(combined)
+        tree_levels.append(next_level)
+        current_level = next_level
+
+    root = tree_levels[-1][0]
+    return root, tree_levels
+
+def get_merkle_proof(index, tree_levels):
+    proof = []
+    idx = index
+    for level in tree_levels[:-1]:
+        neighbor_idx = idx ^ 1
+        if neighbor_idx < len(level):
+            proof.append(level[neighbor_idx])
+        else:
+            proof.append(level[idx])  # Nếu lẻ, duplicate node cuối
+        idx = idx // 2
+    return proof
+
+def verify_commitment_merkle_proof(m, r, proof, index, root):
+    committed_leaf = commit(m, r)
+    idx = index
+
+    computed_hash = committed_leaf
+    for neighbor_hash in proof:
+        if idx % 2 == 0:
+            computed_hash = sha256(computed_hash + neighbor_hash)
+        else:
+            computed_hash = sha256(neighbor_hash + computed_hash)
+        idx = idx // 2
+
+    print(f"✅ Hash tính được từ proof: {computed_hash}")
+    print(f"✅ Root public: {root}")
+    return computed_hash == root
+
+# ----- Test thử -----
+messages = ["data1", "data2", "data3", "data4", "data5"]
+randomness_list = ["r1", "r2", "r3", "r4", "r5"]
+
+# Build tree
+root, tree_levels = build_commitment_merkle_tree(messages, randomness_list)
+print(f"\nRoot Commitment Merkle Tree: {root}")
+
+# Chọn leaf cần chứng minh, ví dụ index 3 (data4)
+index = 3
+proof = get_merkle_proof(index, tree_levels)
+print(f"\nProof cho index {index} ({messages[index]}): {proof}")
+
+# Verify
+result = verify_commitment_merkle_proof(messages[index], randomness_list[index], proof, index, root)
+print("\n✅ Kết quả:", "Thành công" if result else "Thất bại")
